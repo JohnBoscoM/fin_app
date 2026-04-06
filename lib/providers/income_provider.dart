@@ -46,4 +46,14 @@ class IncomeProvider extends ChangeNotifier {
   double getTotalIncome() {
     return _incomes.fold(0.0, (sum, i) => sum + i.amount);
   }
+
+  List<Income> getIncomesForMonth(DateTime month) {
+    return _incomes.where((i) =>
+      i.createdAt.year == month.year && i.createdAt.month == month.month,
+    ).toList();
+  }
+
+  double getTotalIncomeForMonth(DateTime month) {
+    return getIncomesForMonth(month).fold(0.0, (sum, i) => sum + i.amount);
+  }
 }

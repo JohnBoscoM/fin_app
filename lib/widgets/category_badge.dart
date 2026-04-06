@@ -1,35 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/category_provider.dart';
 
 class CategoryBadge extends StatelessWidget {
-  final String category;
+  final String categoryId;
   final bool isSelected;
   final VoidCallback? onTap;
 
-  static const Map<String, Color> categoryColors = {
-    'Housing': Color(0xFFFF6B6B),
-    'Food': Color(0xFFFFA500),
-    'Transport': Color(0xFF4ECDC4),
-    'Subscriptions': Color(0xFF95E1D3),
-    'Health': Color(0xFFA8E6CF),
-    'Entertainment': Color(0xFFFFD93D),
-    'Other': Color(0xFFC9ADA7),
-  };
-
   const CategoryBadge({
     super.key,
-    required this.category,
+    required this.categoryId,
     this.isSelected = false,
     this.onTap,
   });
 
-  Color getCategoryColor() {
-    return categoryColors[category] ?? const Color(0xFFC9ADA7);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = getCategoryColor();
+    final catProvider = context.watch<CategoryProvider>();
+    final l = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Handle "All" filter with empty categoryId
+    if (categoryId.isEmpty) {
+      final color = const Color(0xFF9E9E9E);
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? color : color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: isSelected ? null : Border.all(color: color),
+          ),
+          child: Text(
+            l.noCategory,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : isDark ? Colors.white : Colors.black,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final cat = catProvider.getCategoryById(categoryId);
+    final color = cat?.color ?? const Color(0xFFC9ADA7);
+    final label = cat != null
+        ? catProvider.getDisplayName(cat, l)
+        : categoryId;
 
     return GestureDetector(
       onTap: onTap,
@@ -40,17 +60,26 @@ class CategoryBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: isSelected ? null : Border.all(color: color),
         ),
-        child: Text(
-          category,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isSelected
-                ? Colors.white
-                : isDark
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (cat != null) ...[
+              Icon(cat.icon, size: 14, color: isSelected ? Colors.white : color),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelected
                     ? Colors.white
-                    : Colors.black,
-          ),
+                    : isDark
+                        ? Colors.white
+                        : Colors.black,
+              ),
+            ),
+          ],
         ),
       ),
     );

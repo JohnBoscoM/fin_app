@@ -17,9 +17,36 @@ class ExpenseProvider extends ChangeNotifier {
     notifyListeners();
     
     _expenses = await _storage.getExpenses();
+
+    // Migrate old capitalized category names to lowercase IDs
+    bool migrated = false;
+    for (int i = 0; i < _expenses.length; i++) {
+      final oldCat = _expenses[i].category;
+      final newCat = _migrateCategoryName(oldCat);
+      if (newCat != oldCat) {
+        _expenses[i] = _expenses[i].copyWith(category: newCat);
+        migrated = true;
+      }
+    }
+    if (migrated) {
+      await _storage.saveExpenses(_expenses);
+    }
     
     _isLoading = false;
     notifyListeners();
+  }
+
+  static String _migrateCategoryName(String category) {
+    const mapping = {
+      'Housing': 'housing',
+      'Food': 'food',
+      'Transport': 'transport',
+      'Subscriptions': 'subscriptions',
+      'Health': 'health',
+      'Entertainment': 'entertainment',
+      'Other': 'other',
+    };
+    return mapping[category] ?? category;
   }
 
   Future<void> addExpense(Expense expense) async {
@@ -54,6 +81,37 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<Expense> getTopExpenses({int limit = 5}) {
     final sorted = [..._expenses]..sort((a, b) => b.amount.compareTo(a.amount));
+    return sorted.take(limit).toList();
+  }
+
+  List<Expense> getExpensesForMonth(DateTime month) {
+    return _expenses.where((e) =>
+      e.createdAt.year == month.year && e.createdAt.month == month.month,
+    ).toList();
+  }
+
+  List<Expense> getExpensesByCategoryForMonth(String category, DateTime month) {
+    return getExpensesForMonth(month)
+        .where((e) => category.isEmpty || e.category == category)
+        .toList();
+  }
+
+  double getTotalExpensesForMonth(DateTime month) {
+    return getExpensesForMonth(month).fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  Map<String, double> getCategoryTotalsForMonth(DateTime month) {
+    final expenses = getExpensesForMonth(month);
+    final map = <String, double>{};
+    for (final e in expenses) {
+      map[e.category] = (map[e.category] ?? 0) + e.amount;
+    }
+    return map;
+  }
+
+  List<Expense> getTopExpensesForMonth(DateTime month, {int limit = 5}) {
+    final sorted = [...getExpensesForMonth(month)]
+      ..sort((a, b) => b.amount.compareTo(a.amount));
     return sorted.take(limit).toList();
   }
 }

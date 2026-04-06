@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../themes/app_themes.dart';
 
 class AnimatedProgressBar extends StatefulWidget {
   final double progress; // 0.0 to 100.0
   final double height;
   final Color? backgroundColor;
+  final Color? foregroundColor;
   final Duration duration;
 
   const AnimatedProgressBar({
@@ -11,6 +13,7 @@ class AnimatedProgressBar extends StatefulWidget {
     required this.progress,
     this.height = 8,
     this.backgroundColor,
+    this.foregroundColor,
     this.duration = const Duration(milliseconds: 500),
   });
 
@@ -52,12 +55,15 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
   }
 
   Color getProgressColor(double progress) {
+    if (widget.foregroundColor != null) return widget.foregroundColor!;
     if (progress >= 100) {
-      return const Color(0xFF4CAF50);
-    } else if (progress >= 80) {
-      return const Color(0xFF66BB6A);
+      return AppColors.positive;
+    } else if (progress >= 90) {
+      return AppColors.negative;
+    } else if (progress >= 70) {
+      return AppColors.warning;
     } else {
-      return const Color(0xFFE85D75);
+      return AppColors.primary;
     }
   }
 
@@ -67,14 +73,12 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
       animation: _animation,
       builder: (context, child) {
         return ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(widget.height / 2),
           child: LinearProgressIndicator(
-            value: _animation.value / 100,
+            value: (_animation.value / 100).clamp(0.0, 1.0),
             minHeight: widget.height,
             backgroundColor: widget.backgroundColor ??
-                (Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF424242)
-                    : const Color(0xFFEEEEEE)),
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(
               getProgressColor(_animation.value),
             ),
