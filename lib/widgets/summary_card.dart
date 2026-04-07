@@ -69,7 +69,7 @@ class _SummaryCardState extends State<SummaryCard>
     final formatter = NumberFormat.currency(
       locale: widget.locale,
       symbol: '\$',
-      decimalDigits: 2,
+      decimalDigits: 0,
     );
 
     return Container(
@@ -114,6 +114,8 @@ class _SummaryCardState extends State<SummaryCard>
                       theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               );
             },
           ),

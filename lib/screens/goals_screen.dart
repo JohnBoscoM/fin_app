@@ -5,7 +5,9 @@ import 'package:uuid/uuid.dart';
 import '../l10n/app_localizations.dart';
 import '../models/index.dart';
 import '../providers/goals_provider.dart';
+import '../providers/expense_provider.dart';
 import '../providers/currency_provider.dart';
+import '../providers/theme_provider.dart';
 import '../themes/app_themes.dart';
 import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_card.dart';
@@ -34,10 +36,19 @@ class GoalsScreen extends StatelessWidget {
   void _showAddFundsSheet(BuildContext context, SavingsGoal goal) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => AddFundsSheet(
         goal: goal,
         onAdd: (amount) {
           context.read<GoalsProvider>().addFundsToGoal(goal.id, amount);
+          context.read<ExpenseProvider>().addExpense(Expense(
+            id: const Uuid().v4(),
+            name: goal.name,
+            amount: amount,
+            category: 'savings',
+            isRecurring: false,
+            createdAt: DateTime.now(),
+          ));
         },
       ),
     );
@@ -57,7 +68,12 @@ class GoalsScreen extends StatelessWidget {
               children: [
                 Text(l.selectGoal, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
-                ...activeGoals.map((goal) {
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ...activeGoals.map((goal) {
                   final pct = goal.targetAmount > 0
                       ? (goal.currentAmount / goal.targetAmount * 100)
                           .clamp(0, 100)
@@ -77,6 +93,10 @@ class GoalsScreen extends StatelessWidget {
                     },
                   );
                 }),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -98,6 +118,7 @@ class GoalsScreen extends StatelessWidget {
     final completedGoals = goals.where((g) => g.isCompleted).toList();
     final totalSaved = goalsProvider.getTotalSavingsCurrent();
     final totalTarget = goalsProvider.getTotalSavingsTarget();
+    final isMonochrome = context.watch<ThemeProvider>().isMonochrome;
 
     return Scaffold(
       body: SafeArea(
@@ -167,17 +188,25 @@ class GoalsScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Text(
-                                  fmt(totalSaved),
-                                  style:
-                                      theme.textTheme.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                                Flexible(
+                                  child: Text(
+                                    fmt(totalSaved),
+                                    style:
+                                        theme.textTheme.headlineMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  '${l.ofLabel} ${fmt(totalTarget)}',
-                                  style: theme.textTheme.bodyMedium,
+                                Flexible(
+                                  child: Text(
+                                    '${l.ofLabel} ${fmt(totalTarget)}',
+                                    style: theme.textTheme.bodyMedium,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ),
@@ -187,7 +216,7 @@ class GoalsScreen extends StatelessWidget {
                                   ? (totalSaved / totalTarget * 100)
                                   : 0,
                               height: 6,
-                              foregroundColor: AppColors.primary,
+                              foregroundColor: isMonochrome ? const Color(0xFFA5D6A7) : theme.colorScheme.primary,
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -322,7 +351,10 @@ class _GoalCardState extends State<_GoalCard>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final goal = widget.goal;
-    final color = Color(int.parse('0xFF${goal.colorHex.replaceAll('#', '')}'));
+    final isMonochrome = context.watch<ThemeProvider>().isMonochrome;
+    final color = isMonochrome
+        ? const Color(0xFFA5D6A7)
+        : Color(int.parse('0xFF${goal.colorHex.replaceAll('#', '')}'));
 
     return ScaleTransition(
       scale: _scaleAnimation,
@@ -378,6 +410,8 @@ class _GoalCardState extends State<_GoalCard>
               Text(
                 '${widget.formatCurrency(goal.currentAmount)} / ${widget.formatCurrency(goal.targetAmount)}',
                 style: theme.textTheme.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Row(
@@ -417,11 +451,11 @@ class _SavingsButton extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.12),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.savings_rounded,
-            color: AppColors.primary, size: 18),
+        child: Icon(Icons.savings_rounded,
+            color: Theme.of(context).colorScheme.primary, size: 18),
       ),
     );
   }
@@ -439,8 +473,8 @@ class _AddButton extends StatelessWidget {
       child: Container(
         width: 36,
         height: 36,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary,
           shape: BoxShape.circle,
         ),
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
@@ -528,154 +562,161 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
         24, 8, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                widget.goal != null ? AppLocalizations.of(context)!.editGoal : AppLocalizations.of(context)!.newGoal,
-                style: theme.textTheme.titleLarge,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Emoji picker
-            SizedBox(
-              height: 44,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _emojis.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 4),
-                itemBuilder: (context, index) {
-                  final emoji = _emojis[index];
-                  final isSelected = _emoji == emoji;
-                  return GestureDetector(
-                    onTap: () => setState(() => _emoji = emoji),
-                    child: Container(
-                      width: 44,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.15)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                        border: isSelected
-                            ? Border.all(color: AppColors.primary, width: 1.5)
-                            : null,
-                      ),
-                      child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.goalName),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _targetController,
-              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.targetAmount),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _currentController,
-              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.currentAmount),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 12),
-            // Color picker
-            Text('Color', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Row(
-              children: _colors.map((hex) {
-                final color = Color(int.parse('0xFF$hex'));
-                final isSelected = _colorHex == hex;
-                return GestureDetector(
-                  onTap: () => setState(() => _colorHex = hex),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.white, width: 2.5)
-                          : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      widget.goal != null ? AppLocalizations.of(context)!.editGoal : AppLocalizations.of(context)!.newGoal,
+                      style: theme.textTheme.titleLarge,
                     ),
                   ),
-                );
-              }).toList(),
+                  const SizedBox(height: 16),
+                  // Emoji picker
+                  SizedBox(
+                    height: 44,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _emojis.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 4),
+                      itemBuilder: (context, index) {
+                        final emoji = _emojis[index];
+                        final isSelected = _emoji == emoji;
+                        return GestureDetector(
+                          onTap: () => setState(() => _emoji = emoji),
+                          child: Container(
+                            width: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              border: isSelected
+                                  ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1.5)
+                                  : null,
+                            ),
+                            child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(labelText: AppLocalizations.of(context)!.goalName),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _targetController,
+                    decoration: InputDecoration(labelText: AppLocalizations.of(context)!.targetAmount),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _currentController,
+                    decoration: InputDecoration(labelText: AppLocalizations.of(context)!.currentAmount),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                  // Color picker
+                  Text('Color', style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: _colors.map((hex) {
+                      final color = Color(int.parse('0xFF$hex'));
+                      final isSelected = _colorHex == hex;
+                      return GestureDetector(
+                        onTap: () => setState(() => _colorHex = hex),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(color: Colors.white, width: 2.5)
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  // Deadline
+                  GestureDetector(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate:
+                            _deadline ?? DateTime.now().add(const Duration(days: 90)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      );
+                      if (date != null) setState(() => _deadline = date);
+                    },
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.colorScheme.outline),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _deadline != null
+                                ? DateFormat('d MMM yyyy').format(_deadline!)
+                                : AppLocalizations.of(context)!.deadline,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: _deadline != null
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Icon(Icons.calendar_today_rounded,
+                              size: 20,
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            // Deadline
-            GestureDetector(
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate:
-                      _deadline ?? DateTime.now().add(const Duration(days: 90)),
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 3650)),
-                );
-                if (date != null) setState(() => _deadline = date);
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: theme.colorScheme.outline),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: FilledButton(
+              onPressed: _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _deadline != null
-                          ? DateFormat('d MMM yyyy').format(_deadline!)
-                          : AppLocalizations.of(context)!.deadline,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: _deadline != null
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Icon(Icons.calendar_today_rounded,
-                        size: 20,
-                        color: theme.colorScheme.onSurfaceVariant),
-                  ],
-                ),
+              ),
+              child: Text(
+                AppLocalizations.of(context)!.save,
+                style:
+                    theme.textTheme.titleMedium?.copyWith(color: Colors.white),
               ),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                onPressed: _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  AppLocalizations.of(context)!.save,
-                  style:
-                      theme.textTheme.titleMedium?.copyWith(color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -720,71 +761,74 @@ class _AddFundsSheetState extends State<AddFundsSheet> {
         24, 8, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${l.addFunds} - ${widget.goal.name}',
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${currency.format(remaining, decimalDigits: 0)} ${l.remaining}',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: _presets.map((preset) {
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _amountController.text = preset.toStringAsFixed(0);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${l.addFunds} - ${widget.goal.name}',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${currency.format(remaining, decimalDigits: 0)} ${l.remaining}',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: _presets.map((preset) {
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: OutlinedButton(
+                      onPressed: () {
+                        _amountController.text = preset.toStringAsFixed(0);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: theme.colorScheme.outline),
                       ),
-                      side: BorderSide(color: theme.colorScheme.outline),
-                    ),
-                    child: Text(
-                      currency.current.symbolAfter
-                          ? '${preset.toStringAsFixed(0)}${currency.current.symbol}'
-                          : '${currency.current.symbol}${preset.toStringAsFixed(0)}',
+                      child: Text(
+                        currency.current.symbolAfter
+                            ? '${preset.toStringAsFixed(0)}${currency.current.symbol}'
+                            : '${currency.current.symbol}${preset.toStringAsFixed(0)}',
+                      ),
                     ),
                   ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _amountController,
+              decoration: InputDecoration(labelText: l.customAmount),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onSubmitted: (_) => _add(),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton(
+                onPressed: _add,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _amountController,
-            decoration: InputDecoration(labelText: l.customAmount),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: FilledButton(
-              onPressed: _add,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                child: Text(
+                  l.save,
+                  style:
+                      theme.textTheme.titleMedium?.copyWith(color: Colors.white),
                 ),
-              ),
-              child: Text(
-                l.addFunds,
-                style:
-                    theme.textTheme.titleMedium?.copyWith(color: Colors.white),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

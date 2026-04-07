@@ -138,10 +138,13 @@
   "electricity": "El",
   "phone": "Telefon",
   "internet": "Internet",
+  "savings": "Sparande",
   "addCategory": "Lägg till kategori",
   "categoryName": "Kategorinamn",
   "categoryColor": "Färg",
   "categoryIcon": "Ikon",
   "deleteCategory": "Ta bort kategori",
-  "deleteCategoryConfirm": "Ta bort denna kategori? Utgifter som använder den behåller sin data."
+  "deleteCategoryConfirm": "Ta bort denna kategori? Utgifter som använder den behåller sin data.",
+  "accentColor": "Accentfärg",
+  "monochrome": "Monokrom"
 }

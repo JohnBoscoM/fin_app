@@ -63,7 +63,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
     } else if (progress >= 70) {
       return AppColors.warning;
     } else {
-      return AppColors.primary;
+      return Theme.of(context).colorScheme.primary;
     }
   }
 

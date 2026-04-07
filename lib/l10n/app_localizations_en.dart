@@ -430,6 +430,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get internet => 'Internet';
 
   @override
+  String get savings => 'Savings';
+
+  @override
   String get addCategory => 'Add Category';
 
   @override
@@ -447,4 +450,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deleteCategoryConfirm =>
       'Delete this category? Expenses using it will keep their data.';
+
+  @override
+  String get accentColor => 'Accent Color';
+
+  @override
+  String get monochrome => 'Monochrome';
 }

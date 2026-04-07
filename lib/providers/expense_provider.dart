@@ -85,9 +85,30 @@ class ExpenseProvider extends ChangeNotifier {
   }
 
   List<Expense> getExpensesForMonth(DateTime month) {
-    return _expenses.where((e) =>
-      e.createdAt.year == month.year && e.createdAt.month == month.month,
-    ).toList();
+    final List<Expense> result = [];
+    for (final e in _expenses) {
+      final sameMonth = e.createdAt.year == month.year
+                     && e.createdAt.month == month.month;
+      if (sameMonth) {
+        result.add(e);
+      } else if (e.isRecurring && _isBeforeMonth(e.createdAt, month)) {
+        result.add(e.copyWith(
+          id: '${e.id}_${month.year}_${month.month}',
+          createdAt: DateTime(month.year, month.month,
+              e.createdAt.day.clamp(1, _daysInMonth(month))),
+        ));
+      }
+    }
+    return result;
+  }
+
+  bool _isBeforeMonth(DateTime date, DateTime month) {
+    return date.year < month.year ||
+      (date.year == month.year && date.month < month.month);
+  }
+
+  int _daysInMonth(DateTime month) {
+    return DateTime(month.year, month.month + 1, 0).day;
   }
 
   List<Expense> getExpensesByCategoryForMonth(String category, DateTime month) {

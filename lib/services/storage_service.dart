@@ -12,6 +12,8 @@ class StorageService {
   static const String _themeKey = 'app_theme';
   static const String _currencyKey = 'app_currency';
   static const String _categoriesKey = 'app_categories';
+  static const String _accentColorKey = 'app_accent_color';
+  static const String _monochromeKey = 'app_monochrome';
 
   late SharedPreferences _prefs;
 
@@ -106,6 +108,18 @@ class StorageService {
   Future<void> setDarkMode(bool isDark) async {
     await _prefs.setBool(_themeKey, isDark);
   }
+
+  // Accent color preference
+  int? getAccentColor() => _prefs.getInt(_accentColorKey);
+
+  Future<void> setAccentColor(int colorValue) =>
+      _prefs.setInt(_accentColorKey, colorValue);
+
+  // Monochrome preference
+  bool? getMonochrome() => _prefs.getBool(_monochromeKey);
+
+  Future<void> setMonochrome(bool value) =>
+      _prefs.setBool(_monochromeKey, value);
 
   // Currency preference
   String? getCurrency() {

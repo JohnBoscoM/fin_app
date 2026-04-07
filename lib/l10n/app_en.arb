@@ -138,10 +138,13 @@
   "electricity": "Electricity",
   "phone": "Phone",
   "internet": "Internet",
+  "savings": "Savings",
   "addCategory": "Add Category",
   "categoryName": "Category Name",
   "categoryColor": "Color",
   "categoryIcon": "Icon",
   "deleteCategory": "Delete Category",
-  "deleteCategoryConfirm": "Delete this category? Expenses using it will keep their data."
+  "deleteCategoryConfirm": "Delete this category? Expenses using it will keep their data.",
+  "accentColor": "Accent Color",
+  "monochrome": "Monochrome"
 }

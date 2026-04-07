@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/category_provider.dart';
+import '../providers/theme_provider.dart';
 
 class CategoryBadge extends StatelessWidget {
   final String categoryId;
@@ -46,7 +47,10 @@ class CategoryBadge extends StatelessWidget {
     }
 
     final cat = catProvider.getCategoryById(categoryId);
-    final color = cat?.color ?? const Color(0xFFC9ADA7);
+    final isMonochrome = context.watch<ThemeProvider>().isMonochrome;
+    final color = isMonochrome
+        ? (categoryId == 'savings' ? const Color(0xFFA5D6A7) : const Color(0xFF9E9E9E))
+        : (cat?.color ?? const Color(0xFFC9ADA7));
     final label = cat != null
         ? catProvider.getDisplayName(cat, l)
         : categoryId;

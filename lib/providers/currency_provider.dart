@@ -59,14 +59,14 @@ class CurrencyProvider extends ChangeNotifier {
     }
   }
 
-  String format(double amount, {int decimalDigits = 2, String? locale}) {
+  String format(double amount, {int decimalDigits = 0, String? locale}) {
     if (current.symbolAfter) {
       final formatted = NumberFormat.currency(
         locale: locale,
         symbol: '',
         decimalDigits: decimalDigits,
       ).format(amount).trimRight();
-      return '${formatted}${current.symbol}';
+      return '$formatted${current.symbol}';
     }
     return NumberFormat.currency(
       locale: locale,

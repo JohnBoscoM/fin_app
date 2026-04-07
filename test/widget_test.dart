@@ -17,7 +17,6 @@ void main() {
     await tester.pumpWidget(
       MyApp(
         storageService: StorageService(),
-        initialDarkMode: false,
         initialLocale: const Locale('en', 'US'),
       ),
     );

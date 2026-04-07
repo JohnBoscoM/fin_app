@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class AppCard extends StatefulWidget {
@@ -47,6 +48,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final card = AnimatedBuilder(
       animation: _scaleAnimation,
       builder: (context, child) {
@@ -55,18 +57,29 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
           child: child,
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: widget.backgroundColor ?? theme.cardColor,
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          border: Border.all(
-            color: theme.colorScheme.outline,
-            width: 0.5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.backgroundColor ??
+                  (isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.white.withValues(alpha: 0.55)),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.white.withValues(alpha: 0.4),
+                width: 0.5,
+              ),
+            ),
+            child: Padding(
+              padding: widget.padding ?? const EdgeInsets.all(20),
+              child: widget.child,
+            ),
           ),
-        ),
-        child: Padding(
-          padding: widget.padding ?? const EdgeInsets.all(20),
-          child: widget.child,
         ),
       ),
     );

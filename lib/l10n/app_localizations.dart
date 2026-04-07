@@ -932,6 +932,12 @@ abstract class AppLocalizations {
   /// **'Internet'**
   String get internet;
 
+  /// No description provided for @savings.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings'**
+  String get savings;
+
   /// No description provided for @addCategory.
   ///
   /// In en, this message translates to:
@@ -967,6 +973,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete this category? Expenses using it will keep their data.'**
   String get deleteCategoryConfirm;
+
+  /// No description provided for @accentColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Accent Color'**
+  String get accentColor;
+
+  /// No description provided for @monochrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Monochrome'**
+  String get monochrome;
 }
 
 class _AppLocalizationsDelegate

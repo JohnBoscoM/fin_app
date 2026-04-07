@@ -28,7 +28,6 @@ void main() async {
   final storageService = StorageService();
   await storageService.init();
 
-  final isDarkMode = storageService.isDarkMode();
   final language = storageService.getLanguage();
 
   final initialLocale = language != null
@@ -37,7 +36,6 @@ void main() async {
 
   runApp(MyApp(
     storageService: storageService,
-    initialDarkMode: isDarkMode,
     initialLocale: initialLocale,
   ));
 }
@@ -54,13 +52,11 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 class MyApp extends StatefulWidget {
   final StorageService storageService;
-  final bool initialDarkMode;
   final Locale initialLocale;
 
   const MyApp({
     super.key,
     required this.storageService,
-    required this.initialDarkMode,
     required this.initialLocale,
   });
 
@@ -91,7 +87,14 @@ class _MyAppState extends State<MyApp> {
               routes: [
                 GoRoute(
                   path: '/',
-                  builder: (context, state) => const DashboardScreen(),
+                  pageBuilder: (context, state) => CustomTransitionPage(
+                    key: state.pageKey,
+                    child: const DashboardScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
                 ),
               ],
             ),
@@ -99,7 +102,14 @@ class _MyAppState extends State<MyApp> {
               routes: [
                 GoRoute(
                   path: '/expenses',
-                  builder: (context, state) => const ExpensesScreen(),
+                  pageBuilder: (context, state) => CustomTransitionPage(
+                    key: state.pageKey,
+                    child: const ExpensesScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
                 ),
               ],
             ),
@@ -107,7 +117,14 @@ class _MyAppState extends State<MyApp> {
               routes: [
                 GoRoute(
                   path: '/goals',
-                  builder: (context, state) => const GoalsScreen(),
+                  pageBuilder: (context, state) => CustomTransitionPage(
+                    key: state.pageKey,
+                    child: const GoalsScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
                 ),
               ],
             ),
@@ -115,7 +132,14 @@ class _MyAppState extends State<MyApp> {
               routes: [
                 GoRoute(
                   path: '/settings',
-                  builder: (context, state) => const SettingsScreen(),
+                  pageBuilder: (context, state) => CustomTransitionPage(
+                    key: state.pageKey,
+                    child: const SettingsScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
                 ),
               ],
             ),
@@ -130,7 +154,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(widget.initialDarkMode),
+          create: (_) => ThemeProvider(widget.storageService),
         ),
         ChangeNotifierProvider(
           create: (_) =>
@@ -165,8 +189,8 @@ class _MyAppState extends State<MyApp> {
           return MaterialApp.router(
             title: 'Budget App',
             debugShowCheckedModeBanner: false,
-            theme: AppThemes.lightTheme(),
-            darkTheme: AppThemes.darkTheme(),
+            theme: AppThemes.lightTheme(accent: themeProvider.accentColor),
+            darkTheme: AppThemes.darkTheme(accent: themeProvider.accentColor),
             themeMode:
                 themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             routerConfig: _router,

@@ -133,6 +133,14 @@ class CategoryProvider extends ChangeNotifier {
           iconCodePoint: Icons.wifi_rounded.codePoint,
           isBuiltIn: true,
         ),
+        ExpenseCategory(
+          id: 'savings',
+          nameKey: 'savings',
+          colorValue: 0xFF2CB67D,
+          iconCodePoint: Icons.savings_rounded.codePoint,
+          iconFontFamily: 'MaterialIcons',
+          isBuiltIn: true,
+        ),
         // "Other" always last among built-ins
         ExpenseCategory(
           id: 'other',
@@ -148,6 +156,19 @@ class CategoryProvider extends ChangeNotifier {
     if (_categories.isEmpty) {
       _categories = List.of(defaultCategories);
       await _storage.saveCategories(_categories);
+    } else {
+      // Migration: ensure 'savings' category exists
+      final hasSavings = _categories.any((c) => c.id == 'savings');
+      if (!hasSavings) {
+        final otherIdx = _categories.indexWhere((c) => c.id == 'other');
+        final savingsCat = defaultCategories.firstWhere((c) => c.id == 'savings');
+        if (otherIdx >= 0) {
+          _categories.insert(otherIdx, savingsCat);
+        } else {
+          _categories.add(savingsCat);
+        }
+        await _storage.saveCategories(_categories);
+      }
     }
     notifyListeners();
   }
@@ -236,6 +257,8 @@ class CategoryProvider extends ChangeNotifier {
         return l.phone;
       case 'internet':
         return l.internet;
+      case 'savings':
+        return l.savings;
       default:
         return id;
     }

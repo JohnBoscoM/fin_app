@@ -24,7 +24,7 @@ class DonutChart extends StatefulWidget {
     super.key,
     required this.segments,
     this.size = 180,
-    this.strokeWidth = 24,
+    this.strokeWidth = 14,
     this.center,
     this.duration = const Duration(milliseconds: 800),
   });
@@ -108,21 +108,21 @@ class _DonutPainter extends CustomPainter {
     final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    // Draw track
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, trackPaint);
-
-    if (segments.isEmpty) return;
+    // Draw track only when there are no segments
+    if (segments.isEmpty || segments.fold<double>(0, (sum, s) => sum + s.value) == 0) {
+      final trackPaint = Paint()
+        ..color = trackColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round;
+      canvas.drawCircle(center, radius, trackPaint);
+      return;
+    }
 
     final total = segments.fold<double>(0, (sum, s) => sum + s.value);
-    if (total == 0) return;
 
     const startAngle = -math.pi / 2;
-    const gapAngle = 0.06; // Gap between segments
+    const gapAngle = 0.25; // Gap between segments
     final totalGap = gapAngle * segments.length;
     final availableSweep = 2 * math.pi - totalGap;
     var currentAngle = startAngle;
@@ -133,7 +133,7 @@ class _DonutPainter extends CustomPainter {
         ..color = segment.color
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.butt;
+        ..strokeCap = StrokeCap.round;
 
       canvas.drawArc(rect, currentAngle, sweepAngle, false, paint);
       currentAngle += sweepAngle + gapAngle;

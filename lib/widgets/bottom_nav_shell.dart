@@ -2,13 +2,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../l10n/app_localizations.dart';
+import '../models/index.dart';
 import '../providers/expense_provider.dart';
 import '../providers/income_provider.dart';
 import '../providers/goals_provider.dart';
 import '../screens/expenses_screen.dart';
 import '../screens/goals_screen.dart';
 import '../themes/app_themes.dart';
+import 'glass_container.dart';
 
 class BottomNavShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -65,7 +68,7 @@ class BottomNavShell extends StatelessWidget {
                 const SizedBox(height: 8),
                 _AddOption(
                   icon: CupertinoIcons.money_dollar_circle_fill,
-                  iconColor: AppColors.primary,
+                  iconColor: Theme.of(context).colorScheme.primary,
                   label: l.addSavings,
                   onTap: () {
                     Navigator.pop(ctx);
@@ -136,42 +139,59 @@ class BottomNavShell extends StatelessWidget {
               children: [
                 Text(l.selectGoal, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
-                ...activeGoals.map((goal) {
-                  final pct = goal.targetAmount > 0
-                      ? (goal.currentAmount / goal.targetAmount * 100)
-                          .clamp(0, 100)
-                          .toStringAsFixed(0)
-                      : '0';
-                  return ListTile(
-                    leading: Text(goal.emoji, style: const TextStyle(fontSize: 28)),
-                    title: Text(goal.name),
-                    subtitle: Text('$pct%'),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ...activeGoals.map((goal) {
+                          final pct = goal.targetAmount > 0
+                              ? (goal.currentAmount / goal.targetAmount * 100)
+                                  .clamp(0, 100)
+                                  .toStringAsFixed(0)
+                              : '0';
+                          return ListTile(
+                            leading: Text(goal.emoji, style: const TextStyle(fontSize: 28)),
+                            title: Text(goal.name),
+                            subtitle: Text('$pct%'),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                builder: (_) => AddFundsSheet(
+                                  goal: goal,
+                                  onAdd: (amount) {
+                                    context
+                                        .read<GoalsProvider>()
+                                        .addFundsToGoal(goal.id, amount);
+                                    context.read<ExpenseProvider>().addExpense(Expense(
+                                      id: const Uuid().v4(),
+                                      name: goal.name,
+                                      amount: amount,
+                                      category: 'savings',
+                                      isRecurring: false,
+                                      createdAt: DateTime.now(),
+                                    ));
+                                  },
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                      ],
                     ),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => AddFundsSheet(
-                          goal: goal,
-                          onAdd: (amount) {
-                            context
-                                .read<GoalsProvider>()
-                                .addFundsToGoal(goal.id, amount);
-                          },
-                        ),
-                      );
-                    },
-                  );
-                }),
+                  ),
+                ),
                 const Divider(height: 24),
                 ListTile(
-                  leading: const Icon(CupertinoIcons.add_circled,
-                      color: AppColors.primary),
+                  leading: Icon(CupertinoIcons.add_circled,
+                      color: Theme.of(ctx).colorScheme.primary),
                   title: Text(l.addGoal,
-                      style: TextStyle(color: AppColors.primary)),
+                      style: TextStyle(color: Theme.of(ctx).colorScheme.primary)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -198,54 +218,50 @@ class BottomNavShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: navigationShell,
       extendBody: true,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: theme.bottomNavigationBarTheme.backgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: theme.colorScheme.outline,
-              width: 0.5,
-            ),
-          ),
-        ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         child: SafeArea(
-          child: SizedBox(
-            height: 64,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: CupertinoIcons.house_fill,
-                  label: l.home,
-                  isSelected: _selectedIndex == 0,
-                  onTap: () => _onTap(context, 0),
-                ),
-                _NavItem(
-                  icon: CupertinoIcons.doc_text_fill,
-                  label: l.records,
-                  isSelected: _selectedIndex == 1,
-                  onTap: () => _onTap(context, 1),
-                ),
-                _FabItem(onTap: () => _onTap(context, 2)),
-                _NavItem(
-                  icon: CupertinoIcons.flag_fill,
-                  label: l.goals,
-                  isSelected: _selectedIndex == 3,
-                  onTap: () => _onTap(context, 3),
-                ),
-                _NavItem(
-                  icon: CupertinoIcons.ellipsis,
-                  label: l.menu,
-                  isSelected: _selectedIndex == 4,
-                  onTap: () => _onTap(context, 4),
-                ),
-              ],
+          child: GlassContainer(
+            borderRadius: 28,
+            blur: 30,
+            opacity: 0.1,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: CupertinoIcons.house_fill,
+                    label: l.home,
+                    isSelected: _selectedIndex == 0,
+                    onTap: () => _onTap(context, 0),
+                  ),
+                  _NavItem(
+                    icon: CupertinoIcons.doc_text_fill,
+                    label: l.records,
+                    isSelected: _selectedIndex == 1,
+                    onTap: () => _onTap(context, 1),
+                  ),
+                  _FabItem(onTap: () => _onTap(context, 2)),
+                  _NavItem(
+                    icon: CupertinoIcons.flag_fill,
+                    label: l.goals,
+                    isSelected: _selectedIndex == 3,
+                    onTap: () => _onTap(context, 3),
+                  ),
+                  _NavItem(
+                    icon: CupertinoIcons.ellipsis,
+                    label: l.menu,
+                    isSelected: _selectedIndex == 4,
+                    onTap: () => _onTap(context, 4),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -270,7 +286,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isSelected
-        ? AppColors.primary
+        ? Theme.of(context).colorScheme.primary
         : Theme.of(context).colorScheme.onSurfaceVariant;
 
     return GestureDetector(
@@ -293,6 +309,8 @@ class _NavItem extends StatelessWidget {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: color,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -313,14 +331,21 @@ class _FabItem extends StatelessWidget {
       child: Container(
         width: 52,
         height: 52,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            ],
+          ),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Color(0x407F5AF0),
-              blurRadius: 12,
-              offset: Offset(0, 4),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),

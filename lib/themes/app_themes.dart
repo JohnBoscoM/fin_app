@@ -36,19 +36,16 @@ class AppColors {
 }
 
 class AppThemes {
-  static ThemeData lightTheme() {
-    final baseTextTheme = GoogleFonts.interTextTheme(
-      ThemeData(brightness: Brightness.light).textTheme,
-    );
+  static ThemeData lightTheme({Color accent = const Color(0xFF7F5AF0)}) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: AppColors.primary,
-      scaffoldBackgroundColor: AppColors.lightBackground,
-      cardColor: AppColors.lightSurface,
+      primaryColor: accent,
+      scaffoldBackgroundColor: const Color(0xFFF0F0F5),
+      cardColor: Colors.white.withValues(alpha: 0.7),
       fontFamily: GoogleFonts.inter().fontFamily,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
+      colorScheme: ColorScheme.light(
+        primary: accent,
         secondary: AppColors.positive,
         tertiary: AppColors.negative,
         surface: AppColors.lightSurface,
@@ -114,7 +111,7 @@ class AppThemes {
         ),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.lightBackground,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
@@ -126,9 +123,9 @@ class AppThemes {
         ),
         iconTheme: IconThemeData(color: AppColors.lightTextPrimary),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor: accent,
         unselectedItemColor: AppColors.lightTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
@@ -136,8 +133,8 @@ class AppThemes {
         selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         elevation: 4,
         shape: CircleBorder(),
@@ -156,13 +153,13 @@ class AppThemes {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: accent, width: 2),
         ),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.lightSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: Colors.white.withValues(alpha: 0.85),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         showDragHandle: true,
         dragHandleColor: AppColors.lightCardBorder,
@@ -177,26 +174,23 @@ class AppThemes {
           return AppColors.lightTextSecondary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          if (states.contains(WidgetState.selected)) return accent;
           return AppColors.lightProgressTrack;
         }),
       ),
     );
   }
 
-  static ThemeData darkTheme() {
-    final baseTextTheme = GoogleFonts.interTextTheme(
-      ThemeData(brightness: Brightness.dark).textTheme,
-    );
+  static ThemeData darkTheme({Color accent = const Color(0xFF7F5AF0)}) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: AppColors.primary,
-      scaffoldBackgroundColor: AppColors.darkBackground,
-      cardColor: AppColors.darkSurface,
+      primaryColor: accent,
+      scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+      cardColor: Colors.white.withValues(alpha: 0.06),
       fontFamily: GoogleFonts.inter().fontFamily,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
+      colorScheme: ColorScheme.dark(
+        primary: accent,
         secondary: AppColors.positive,
         tertiary: AppColors.negative,
         surface: AppColors.darkSurface,
@@ -262,7 +256,7 @@ class AppThemes {
         ),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkBackground,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
@@ -274,9 +268,9 @@ class AppThemes {
         ),
         iconTheme: IconThemeData(color: AppColors.darkTextPrimary),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.darkSurface,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor: accent,
         unselectedItemColor: AppColors.darkTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
@@ -284,8 +278,8 @@ class AppThemes {
         selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         elevation: 4,
         shape: CircleBorder(),
@@ -304,16 +298,16 @@ class AppThemes {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: accent, width: 2),
         ),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.darkSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: const Color(0xFF1A1A1E).withValues(alpha: 0.85),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         showDragHandle: true,
-        dragHandleColor: AppColors.darkCardBorder,
+        dragHandleColor: Colors.white.withValues(alpha: 0.2),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.darkCardBorder,
@@ -325,7 +319,7 @@ class AppThemes {
           return AppColors.darkTextSecondary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          if (states.contains(WidgetState.selected)) return accent;
           return AppColors.darkProgressTrack;
         }),
       ),

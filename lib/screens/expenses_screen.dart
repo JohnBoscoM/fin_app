@@ -93,7 +93,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               children: [
                 Text(l.selectGoal, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
-                ...activeGoals.map((goal) {
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: activeGoals.map((goal) {
                   final pct = goal.targetAmount > 0
                       ? (goal.currentAmount / goal.targetAmount * 100)
                           .clamp(0, 100)
@@ -117,18 +121,29 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             context
                                 .read<GoalsProvider>()
                                 .addFundsToGoal(goal.id, amount);
+                            context.read<ExpenseProvider>().addExpense(Expense(
+                              id: const Uuid().v4(),
+                              name: goal.name,
+                              amount: amount,
+                              category: 'savings',
+                              isRecurring: false,
+                              createdAt: DateTime.now(),
+                            ));
                           },
                         ),
                       );
                     },
                   );
-                }),
+                }).toList(),
+                    ),
+                  ),
+                ),
                 const Divider(height: 24),
                 ListTile(
-                  leading: const Icon(Icons.add_circle_outline_rounded,
-                      color: AppColors.primary),
+                  leading: Icon(Icons.add_circle_outline_rounded,
+                      color: Theme.of(ctx).colorScheme.primary),
                   title: Text(l.addGoal,
-                      style: TextStyle(color: AppColors.primary)),
+                      style: TextStyle(color: Theme.of(ctx).colorScheme.primary)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -190,8 +205,25 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             category: l.income,
             date: i.createdAt,
             isExpense: false,
+            isRecurring: i.isRecurring,
           )),
-    ]..sort((a, b) => b.date.compareTo(a.date));
+    ]..sort((a, b) {
+        // Primary: group by date (newest day first)
+        final dateCmp = b.date.compareTo(a.date);
+        final sameDay = a.date.year == b.date.year &&
+            a.date.month == b.date.month &&
+            a.date.day == b.date.day;
+        if (!sameDay) return dateCmp;
+        // Within same day: income=0, savings=1, expense=2
+        int priorityOf(_TransactionItem t) {
+          if (!t.isExpense) return 0; // income
+          if (t.category == 'savings') return 1; // savings
+          return 2; // expense
+        }
+        final cmp = priorityOf(a).compareTo(priorityOf(b));
+        if (cmp != 0) return cmp;
+        return b.date.compareTo(a.date); // newest first within group
+      });
 
     // Group by date
     final grouped = <String, List<_TransactionItem>>{};
@@ -213,7 +245,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(l.records, style: theme.textTheme.headlineSmall),
+                  Expanded(
+                    child: Text(
+                      l.records,
+                      style: theme.textTheme.headlineSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Row(
                     children: [
                       _MiniActionButton(
@@ -230,7 +269,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       const SizedBox(width: 8),
                       _MiniActionButton(
                         icon: Icons.savings_rounded,
-                        color: AppColors.primary,
+                        color: theme.colorScheme.primary,
                         onTap: _showAddSavingsSheet,
                       ),
                     ],
@@ -470,11 +509,15 @@ class _TransactionRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Text(
-                          item.isExpense
-                              ? catProvider.getDisplayNameById(item.category, l)
-                              : item.category,
-                          style: theme.textTheme.bodySmall,
+                        Flexible(
+                          child: Text(
+                            item.isExpense
+                                ? catProvider.getDisplayNameById(item.category, l)
+                                : item.category,
+                            style: theme.textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         if (item.isRecurring) ...[
                           const SizedBox(width: 6),
@@ -547,11 +590,16 @@ class _MiniStat extends StatelessWidget {
           children: [
             Text(label, style: theme.textTheme.bodySmall),
             const SizedBox(height: 4),
-            Text(
-              amount,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                amount,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
               ),
             ),
           ],
@@ -664,78 +712,87 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Text(
-              widget.expense != null ? l.editExpense : l.addExpense,
-              style: theme.textTheme.titleLarge,
-            ),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(labelText: l.expenseName),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _amountController,
-            decoration: InputDecoration(labelText: l.expenseAmount),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 16),
-          Text(l.category, style: theme.textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ...catProvider.categories.map((cat) {
-                return CategoryBadge(
-                  categoryId: cat.id,
-                  isSelected: _category == cat.id,
-                  onTap: () => setState(() => _category = cat.id),
-                );
-              }),
-              // Add category button
-              GestureDetector(
-                onTap: _showAddCategorySheet,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: theme.colorScheme.outline),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      widget.expense != null ? l.editExpense : l.addExpense,
+                      style: theme.textTheme.titleLarge,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(labelText: l.expenseName),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _amountController,
+                    decoration: InputDecoration(labelText: l.expenseAmount),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(l.category, style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Icon(Icons.add_rounded, size: 14, color: AppColors.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        l.addCategory,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                      ...catProvider.categories.map((cat) {
+                        return CategoryBadge(
+                          categoryId: cat.id,
+                          isSelected: _category == cat.id,
+                          onTap: () => setState(() => _category = cat.id),
+                        );
+                      }),
+                      // Add category button
+                      GestureDetector(
+                        onTap: _showAddCategorySheet,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: theme.colorScheme.outline),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 14, color: theme.colorScheme.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                l.addCategory,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(l.isRecurring, style: theme.textTheme.bodyLarge),
+                      Switch(
+                        value: _isRecurring,
+                        onChanged: (v) => setState(() => _isRecurring = v),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l.isRecurring, style: theme.textTheme.bodyLarge),
-              Switch(
-                value: _isRecurring,
-                onChanged: (v) => setState(() => _isRecurring = v),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -744,7 +801,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
             child: FilledButton(
               onPressed: _save,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: theme.colorScheme.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -775,6 +832,7 @@ class AddIncomeSheet extends StatefulWidget {
 class _AddIncomeSheetState extends State<AddIncomeSheet> {
   final _sourceController = TextEditingController();
   final _amountController = TextEditingController();
+  bool _isRecurring = false;
 
   @override
   void dispose() {
@@ -792,6 +850,7 @@ class _AddIncomeSheetState extends State<AddIncomeSheet> {
       id: const Uuid().v4(),
       source: source,
       amount: amount,
+      isRecurring: _isRecurring,
       createdAt: DateTime.now(),
     ));
     Navigator.pop(context);
@@ -805,42 +864,55 @@ class _AddIncomeSheetState extends State<AddIncomeSheet> {
         24, 8, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(AppLocalizations.of(context)!.addIncome, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _sourceController,
-            decoration: InputDecoration(labelText: AppLocalizations.of(context)!.incomeName),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _amountController,
-            decoration: InputDecoration(labelText: AppLocalizations.of(context)!.incomeAmount),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: FilledButton(
-              onPressed: _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.positive,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(AppLocalizations.of(context)!.addIncome, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _sourceController,
+              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.incomeName),
+              textCapitalization: TextCapitalization.sentences,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _amountController,
+              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.incomeAmount),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(AppLocalizations.of(context)!.isRecurring, style: theme.textTheme.bodyLarge),
+                Switch(
+                  value: _isRecurring,
+                  onChanged: (v) => setState(() => _isRecurring = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton(
+                onPressed: _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.positive,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  AppLocalizations.of(context)!.save,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: Colors.white),
                 ),
               ),
-              child: Text(
-                AppLocalizations.of(context)!.save,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(color: Colors.white),
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -932,98 +1004,100 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
         24, 8, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Text(l.addCategory, style: theme.textTheme.titleLarge),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(labelText: l.categoryName),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          const SizedBox(height: 16),
-          Text(l.categoryColor, style: theme.textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _colorOptions.map((cv) {
-              final isSelected = _selectedColorValue == cv;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedColorValue = cv),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Color(cv),
-                    shape: BoxShape.circle,
-                    border: isSelected
-                        ? Border.all(color: Colors.white, width: 2.5)
-                        : null,
-                  ),
-                  child: isSelected
-                      ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          Text(l.categoryIcon, style: theme.textTheme.labelLarge),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 120,
-            child: GridView.count(
-              crossAxisCount: 8,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: _iconOptions.map((ic) {
-                final isSelected = _selectedIconCodePoint == ic.codePoint;
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(l.addCategory, style: theme.textTheme.titleLarge),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: l.categoryName),
+              textCapitalization: TextCapitalization.sentences,
+            ),
+            const SizedBox(height: 16),
+            Text(l.categoryColor, style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _colorOptions.map((cv) {
+                final isSelected = _selectedColorValue == cv;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedIconCodePoint = ic.codePoint),
+                  onTap: () => setState(() => _selectedColorValue = cv),
                   child: Container(
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? Color(_selectedColorValue).withValues(alpha: 0.25)
-                          : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
+                      color: Color(cv),
+                      shape: BoxShape.circle,
                       border: isSelected
-                          ? Border.all(color: Color(_selectedColorValue), width: 2)
-                          : Border.all(color: theme.colorScheme.outline, width: 0.5),
+                          ? Border.all(color: Colors.white, width: 2.5)
+                          : null,
                     ),
-                    child: Icon(
-                      ic,
-                      size: 18,
-                      color: isSelected ? Color(_selectedColorValue) : theme.colorScheme.onSurface,
-                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                        : null,
                   ),
                 );
               }).toList(),
             ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: FilledButton(
-              onPressed: _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                l.save,
-                style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+            const SizedBox(height: 16),
+            Text(l.categoryIcon, style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 120,
+              child: GridView.count(
+                crossAxisCount: 8,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                children: _iconOptions.map((ic) {
+                  final isSelected = _selectedIconCodePoint == ic.codePoint;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedIconCodePoint = ic.codePoint),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Color(_selectedColorValue).withValues(alpha: 0.25)
+                            : theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: isSelected
+                            ? Border.all(color: Color(_selectedColorValue), width: 2)
+                            : Border.all(color: theme.colorScheme.outline, width: 0.5),
+                      ),
+                      child: Icon(
+                        ic,
+                        size: 18,
+                        color: isSelected ? Color(_selectedColorValue) : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton(
+                onPressed: _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  l.save,
+                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

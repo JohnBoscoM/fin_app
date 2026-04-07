@@ -13,8 +13,8 @@ import '../widgets/empty_state.dart';
 class PortfolioScreen extends StatelessWidget {
   const PortfolioScreen({super.key});
 
-  static const _typeColors = <AssetType, Color>{
-    AssetType.stock: AppColors.primary,
+  static Map<AssetType, Color> _typeColors(Color primary) => <AssetType, Color>{
+    AssetType.stock: primary,
     AssetType.fund: Color(0xFF4ECDC4),
     AssetType.crypto: Color(0xFFFFD93D),
     AssetType.realEstate: Color(0xFFFF6B6B),
@@ -53,6 +53,7 @@ class PortfolioScreen extends StatelessWidget {
     final gainPercent = provider.getTotalGainLossPercent();
     final grouped = provider.getAssetsByType();
     final allocations = provider.getAllocationPercentages();
+    final typeColors = _typeColors(theme.colorScheme.primary);
 
     return Scaffold(
       body: SafeArea(
@@ -71,8 +72,8 @@ class PortfolioScreen extends StatelessWidget {
                           child: Container(
                             width: 36,
                             height: 36,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.add_rounded,
@@ -108,8 +109,8 @@ class PortfolioScreen extends StatelessWidget {
                             child: Container(
                               width: 36,
                               height: 36,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.add_rounded,
@@ -151,13 +152,17 @@ class PortfolioScreen extends StatelessWidget {
                                   size: 18,
                                 ),
                                 const SizedBox(width: 4),
-                                Text(
-                                  '${totalGainLoss >= 0 ? '+' : ''}${fmt(totalGainLoss)}',
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: totalGainLoss >= 0
-                                        ? AppColors.positive
-                                        : AppColors.negative,
-                                    fontWeight: FontWeight.w600,
+                                Flexible(
+                                  child: Text(
+                                    '${totalGainLoss >= 0 ? '+' : ''}${fmt(totalGainLoss)}',
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      color: totalGainLoss >= 0
+                                          ? AppColors.positive
+                                          : AppColors.negative,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -192,7 +197,7 @@ class PortfolioScreen extends StatelessWidget {
                               Center(
                                 child: DonutChart(
                                   size: 160,
-                                  strokeWidth: 22,
+                                  strokeWidth: 14,
                                   segments:
                                       allocations.entries.map((entry) {
                                     final type = AssetType.values.firstWhere(
@@ -202,7 +207,7 @@ class PortfolioScreen extends StatelessWidget {
                                     return DonutSegment(
                                       label: entry.key,
                                       value: entry.value,
-                                      color: _typeColors[type] ??
+                                      color: typeColors[type] ??
                                           AppColors.other,
                                     );
                                   }).toList(),
@@ -232,7 +237,7 @@ class PortfolioScreen extends StatelessWidget {
                                     orElse: () => AssetType.other,
                                   );
                                   final color =
-                                      _typeColors[type] ?? AppColors.other;
+                                      typeColors[type] ?? AppColors.other;
                                   return Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -262,7 +267,7 @@ class PortfolioScreen extends StatelessWidget {
                   // Asset groups
                   ...grouped.entries.map((group) {
                     final typeColor =
-                        _typeColors[group.key] ?? AppColors.other;
+                        typeColors[group.key] ?? AppColors.other;
                     final typeTotal = group.value
                         .fold<double>(0, (s, a) => s + a.currentValue);
                     return SliverToBoxAdapter(
@@ -275,22 +280,28 @@ class PortfolioScreen extends StatelessWidget {
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: typeColor,
-                                        shape: BoxShape.circle,
+                                Flexible(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: typeColor,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      group.key.displayName,
-                                      style: theme.textTheme.titleMedium,
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          group.key.displayName,
+                                          style: theme.textTheme.titleMedium,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 Text(
                                   fmt(typeTotal),
@@ -349,6 +360,8 @@ class PortfolioScreen extends StatelessWidget {
                                                 asset.name,
                                                 style:
                                                     theme.textTheme.bodyLarge,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
@@ -541,7 +554,7 @@ class _AddAssetSheetState extends State<_AddAssetSheet> {
               child: FilledButton(
                 onPressed: _save,
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: theme.colorScheme.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

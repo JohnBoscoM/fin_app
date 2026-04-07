@@ -7,6 +7,7 @@ import '../providers/budget_provider.dart';
 import '../providers/goals_provider.dart';
 import '../providers/currency_provider.dart';
 import '../providers/category_provider.dart';
+import '../providers/theme_provider.dart';
 import '../themes/app_themes.dart';
 import '../widgets/month_selector.dart';
 import '../widgets/animated_progress_bar.dart';
@@ -41,6 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final totalBudgeted = budgetProvider.getTotalBudgeted(_selectedMonth);
     final budgetLeft = totalBudgeted - totalExpenses;
     final categoryTotals = expenseProvider.getCategoryTotalsForMonth(_selectedMonth);
+    final isMonochrome = context.watch<ThemeProvider>().isMonochrome;
 
     return Scaffold(
       body: SafeArea(
@@ -115,13 +117,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Text(
                                 l.allBudgets,
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppColors.primary,
+                                  color: theme.colorScheme.primary,
                                 ),
                               ),
                             ),
@@ -139,6 +141,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           '-${fmt(totalExpenses)} ${l.spentThisMonth}',
                           style: theme.textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 12),
                         AnimatedProgressBar(
@@ -162,7 +166,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     categoryTotals.entries.elementAt(index);
                                 final catProvider = context.watch<CategoryProvider>();
                                 final cat = catProvider.getCategoryById(entry.key);
-                                final color = cat?.color ?? AppColors.other;
+                                final color = isMonochrome
+                                    ? (entry.key == 'savings' ? const Color(0xFFA5D6A7) : const Color(0xFF9E9E9E))
+                                    : (entry.key == 'savings' ? AppColors.positive : (cat?.color ?? AppColors.other));
                                 return _CategorySpendChip(
                                   category: catProvider.getDisplayNameById(entry.key, l),
                                   amount: fmt(entry.value),
@@ -202,13 +208,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Text(
                                 l.statistics,
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppColors.primary,
+                                  color: theme.colorScheme.primary,
                                 ),
                               ),
                             ),
@@ -218,14 +224,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Center(
                           child: DonutChart(
                             size: 180,
-                            strokeWidth: 24,
+                            strokeWidth: 14,
                             segments: categoryTotals.entries.map((entry) {
                               final catProvider = context.read<CategoryProvider>();
                               final cat = catProvider.getCategoryById(entry.key);
                               return DonutSegment(
                                 label: catProvider.getDisplayNameById(entry.key, l),
                                 value: entry.value,
-                                color: cat?.color ?? AppColors.other,
+                                color: isMonochrome
+                                    ? (entry.key == 'savings' ? const Color(0xFFA5D6A7) : const Color(0xFFEF9A9A))
+                                    : (entry.key == 'savings' ? AppColors.positive : (cat?.color ?? AppColors.other)),
                               );
                             }).toList(),
                             center: Column(
@@ -254,7 +262,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: categoryTotals.entries.map((entry) {
                             final catProvider = context.read<CategoryProvider>();
                             final cat = catProvider.getCategoryById(entry.key);
-                            final color = cat?.color ?? AppColors.other;
+                            final color = isMonochrome
+                                ? (entry.key == 'savings' ? const Color(0xFFA5D6A7) : const Color(0xFF9E9E9E))
+                                : (entry.key == 'savings' ? AppColors.positive : (cat?.color ?? AppColors.other));
                             return Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -321,7 +331,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         AnimatedProgressBar(
                                           progress: goal.progressPercent,
                                           height: 4,
-                                          foregroundColor: AppColors.primary,
+                                          foregroundColor: isMonochrome ? const Color(0xFFA5D6A7) : theme.colorScheme.primary,
                                         ),
                                       ],
                                     ),
@@ -330,7 +340,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Text(
                                     '${goal.progressPercent.toStringAsFixed(0)}%',
                                     style: theme.textTheme.labelLarge?.copyWith(
-                                      color: AppColors.primary,
+                                      color: isMonochrome ? const Color(0xFFA5D6A7) : theme.colorScheme.primary,
                                     ),
                                   ),
                                 ],
@@ -414,11 +424,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ],
                                     ),
                                   ),
-                                  Text(
-                                    '-${fmt(expense.amount)}',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: AppColors.negative,
-                                      fontWeight: FontWeight.w600,
+                                  Flexible(
+                                    child: Text(
+                                      '-${fmt(expense.amount)}',
+                                      style: theme.textTheme.bodyLarge?.copyWith(
+                                        color: AppColors.negative,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -558,18 +572,21 @@ class _AnimatedAmountState extends State<_AnimatedAmount>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, _) {
-        return RichText(
-          text: TextSpan(
-            text: widget.formatCurrency(_animation.value),
-            style: widget.style,
-            children: widget.suffix != null
-                ? [
-                    TextSpan(
-                      text: widget.suffix,
-                      style: widget.suffixStyle ?? widget.style,
-                    ),
-                  ]
-                : null,
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          child: RichText(
+            text: TextSpan(
+              text: widget.formatCurrency(_animation.value),
+              style: widget.style,
+              children: widget.suffix != null
+                  ? [
+                      TextSpan(
+                        text: widget.suffix,
+                        style: widget.suffixStyle ?? widget.style,
+                      ),
+                    ]
+                  : null,
+            ),
           ),
         );
       },

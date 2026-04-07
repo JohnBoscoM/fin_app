@@ -48,9 +48,30 @@ class IncomeProvider extends ChangeNotifier {
   }
 
   List<Income> getIncomesForMonth(DateTime month) {
-    return _incomes.where((i) =>
-      i.createdAt.year == month.year && i.createdAt.month == month.month,
-    ).toList();
+    final List<Income> result = [];
+    for (final i in _incomes) {
+      final sameMonth = i.createdAt.year == month.year
+                     && i.createdAt.month == month.month;
+      if (sameMonth) {
+        result.add(i);
+      } else if (i.isRecurring && _isBeforeMonth(i.createdAt, month)) {
+        result.add(i.copyWith(
+          id: '${i.id}_${month.year}_${month.month}',
+          createdAt: DateTime(month.year, month.month,
+              i.createdAt.day.clamp(1, _daysInMonth(month))),
+        ));
+      }
+    }
+    return result;
+  }
+
+  bool _isBeforeMonth(DateTime date, DateTime month) {
+    return date.year < month.year ||
+      (date.year == month.year && date.month < month.month);
+  }
+
+  int _daysInMonth(DateTime month) {
+    return DateTime(month.year, month.month + 1, 0).day;
   }
 
   double getTotalIncomeForMonth(DateTime month) {

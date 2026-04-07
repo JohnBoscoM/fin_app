@@ -42,6 +42,57 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (_) => themeProvider.toggleTheme(),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // Accent color section
+            Text(
+              l.accentColor,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: theme.colorScheme.outline,
+                  width: 0.5,
+                ),
+              ),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: ThemeProvider.accentOptions.map((color) {
+                  final isSelected = themeProvider.rawAccentColor == color;
+                  return GestureDetector(
+                    onTap: () => themeProvider.setAccentColor(color),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: isSelected
+                            ? Border.all(color: Colors.white, width: 2.5)
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _SettingsTile(
+              icon: Icons.filter_b_and_w_rounded,
+              title: l.monochrome,
+              trailing: Switch.adaptive(
+                value: themeProvider.isMonochrome,
+                onChanged: (v) => themeProvider.setMonochrome(v),
+              ),
+            ),
             const SizedBox(height: 24),
 
             // Language section
